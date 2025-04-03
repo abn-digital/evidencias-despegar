@@ -1,0 +1,12 @@
+.clasprc.json
+creds.json
+credentials.json
+.clasp.json
+DS_Store
+node_modules
+desktop.ini
+.vscode
+.env
+dist
+*.sql
+sqls
