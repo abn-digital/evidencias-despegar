@@ -5,6 +5,9 @@ export interface AdsScreenshotterConfig {
   adAccountId: string
   businessId: string
   campaignId: string
+  adIds: string[]
+  screenshotName: string
+  month: string
   screenshotType: "lifetime" | "monthly"
   googleServiceAccountKeyFile?: string
   cookiesPath?: string
@@ -31,8 +34,8 @@ app.get("/", (req, res) => {
 
   if (process.env.IMAGE_PATH) {
     const cwd = process.cwd()
-    imagePath = cwd 
-     process.env.IMAGE_PATH
+    imagePath = cwd
+    process.env.IMAGE_PATH
   } else {
     imagePath =
       "https://media.licdn.com/dms/image/v2/D4D0BAQGYnMuXq_eAZA/company-logo_200_200/company-logo_200_200/0/1706105767413/abndigital_logo?e=2147483647&v=beta&t=id3iaoiHGp6RYTV81duSPDuiMeWU4AweNdGl-VOLqqw"
@@ -54,10 +57,10 @@ app.get("/status", (req, res) => {
 
 // Screenshot Endpoint
 app.post("/screenshot", async (req, res: any) => {
-  const { adAccountId, businessId, campaignId, authenticationFactor, screenshotType } = req.body
+  const { adAccountId, businessId, campaignId, adIds, screenshotName, month, authenticationFactor, screenshotType } = req.body
 
   // Basic validation
-  if (!adAccountId || !businessId || !campaignId || !screenshotType) {
+  if (!adAccountId || !businessId || !campaignId || !adIds || !screenshotName || !month || !screenshotType) {
     return res.status(400).json({
       error: "Missing required fields. Please provide 'adAccountId', 'businessId', 'campaignId' and 'screenshotType'."
     })
@@ -77,6 +80,9 @@ app.post("/screenshot", async (req, res: any) => {
     adAccountId,
     businessId,
     campaignId,
+    adIds,
+    screenshotName,
+    month,
     screenshotType,
     googleServiceAccountKeyFile: process.env.GOOGLE_SERVICE_ACCOUNT_KEY_FILE!,
     cookiesPath: process.env.COOKIES_PATH!,

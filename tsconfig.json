@@ -1,18 +1,17 @@
 {
-    "compilerOptions": {
-      "target": "ES2022",
-      "module": "ESNext",
-      "moduleResolution": "Node",
-      "lib": ["DOM"],
-      "allowImportingTsExtensions": true,
-      "noEmit": true,
-      "strict": false,
-      "strictPropertyInitialization": false,
-      "esModuleInterop": true,
-      "resolveJsonModule": true,
-      "experimentalDecorators": true,
-      "emitDecoratorMetadata": true,
-      "skipLibCheck": true
-    }
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "Node",
+    "lib": ["DOM"],
+    "allowImportingTsExtensions": true,
+    "noEmit": true,
+    "strict": false,
+    "strictPropertyInitialization": false,
+    "esModuleInterop": true,
+    "resolveJsonModule": true,
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+    "skipLibCheck": true
   }
-  
+}

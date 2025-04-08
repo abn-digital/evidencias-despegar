@@ -8,6 +8,9 @@ export interface AdsScreenshotterConfig {
   businessId: string
   campaignId: string
   screenshotType: "lifetime" | "monthly"
+  adIds: string[]
+  month: string
+  screenshotName: string
   googleServiceAccountKeyFile?: string
   gcsBucketName?: string
   cookiesPath?: string
@@ -16,18 +19,38 @@ export interface AdsScreenshotterConfig {
   googleSheetName: string
 }
 
+export enum MonthToFolder {
+  "ENERO" = "1ua7qdI42NO9D0mKaYLdHxLTPMcs2Kkdg",
+  "FEBRERO" = "1FdmlLZh8jmNXS9xZImBfuhRLY7InkB9k",
+  "MARZO" = "1xw25By1iaWAKOcudZ1qkVoIAVZc1vJ-q",
+  "ABRIL" = "1piq_bFaHbbPBSsxL441V02kKufKxUzZ0",
+  "MAYO" = "1jZZ90lez0chKhKdqC3hQYOjxNvObWSCa",
+  "JUNIO" = "16J4CVlaOxZJq91Xu2cxmLr0l8IZtVpZz",
+  "JULIO" = "1qIGgJ5FNeBBtvrfPDzs3FufU0WdEugFt",
+  "AGOSTO" = "12loY12bI2vmpAipu3OqizCijU9U5telG",
+  "SEPTIEMBRE" = "1HyNqKFfkTseibsTvevw3qtOVaKFf91-F",
+  "OCTUBRE" = "1iHt79jSS7NZMdNn7i1AqQkdPoXsczYmp",
+  "NOVIEMBRE" = "1mhNuACwOhqzJIezUptrB5FU8KpQp1pZJ",
+  "DICIEMBRE" = "1ww3mwjT8mqEjy2vmkZvqbhfMqeO1bpxp"
+}
+
 export default class AdsScreenshotter {
   private adAccountId: string
   private businessId: string
   private campaignId: string
   private screenshotType: "lifetime" | "monthly"
+
+  private adIds: string[]
+  private month: string
+  private screenshotName: string
+
   private googleServiceAccountKeyFile: string
   private cookiesPath: string
   private screenshotsFolder: string
   private screenshotSelector: string
   private browser: Browser | null
   private page: Page | null
-  private adPreviewUrls: Map<string, string[]>
+  //private adPreviewUrls: Map<string, string[]>
   private sheets: sheets_v4.Sheets
   private drive: drive_v3.Drive
   private googleSheetId: string
@@ -38,13 +61,18 @@ export default class AdsScreenshotter {
     this.businessId = config.businessId
     this.campaignId = config.campaignId
     this.screenshotType = config.screenshotType
+
+    this.adIds = config.adIds
+    this.month = config.month
+    this.screenshotName = config.screenshotName
+
     this.googleServiceAccountKeyFile = config.googleServiceAccountKeyFile
     this.cookiesPath = config.cookiesPath
     this.screenshotsFolder = config.screenshotsFolder
     this.screenshotSelector = 'div[role="table"]._3h1i._1mie'
     this.browser = null
     this.page = null
-    this.adPreviewUrls = new Map()
+    //this.adPreviewUrls = new Map()
 
     this.googleSheetId = config.googleSheetId
     this.googleSheetName = config.googleSheetName
@@ -126,7 +154,7 @@ export default class AdsScreenshotter {
     const filterSet = this.buildFilterSet()
     const encodedFilterSet = encodeURIComponent(filterSet)
     const columnsParam = this.buildColumnsParam()
-    const lastMonthDate = new Date(new Date().setDate(1)).setHours(-1)
+    const lastMonthDate = new Date(new Date().setDate(1)).setHours(-1) //Chequear esto
     const lastMonthStartDate = new Date(lastMonthDate).setDate(1)
     const startDateString = new Date(lastMonthStartDate).toISOString().split("T")[0]
     const endDateString = new Date(lastMonthDate).toISOString().split("T")[0]
@@ -164,11 +192,12 @@ export default class AdsScreenshotter {
 
   private buildFilterSet(): string {
     const filterSeparator = String.fromCharCode(30)
-    return `CAMPAIGN_GROUP_SELECTED-STRING_SET${filterSeparator}IN${filterSeparator}[${this.campaignId}]`
+    const campaignIds = this.adIds.map((adId) => encodeURIComponent(adId)).join("%2C")
+    return `SEARCH_BY_ADGROUP_IDS-STRING_SET${filterSeparator}ANY${filterSeparator}[${this.campaignId}]`
   }
 
   private buildColumnsParam(): string {
-    const selectedColumns = ["name", "budget", "objective", "start_time_pe", "end_time", "spend", "reach", "impressions", "actions:link_click", "actions:omni_purchase"]
+    const selectedColumns = ["name", "campaign_name", "campaign_group_name", "spend"]
     const columnsParam = selectedColumns.map((column) => encodeURIComponent(column)).join("%2C")
     return columnsParam
   }
@@ -183,7 +212,7 @@ export default class AdsScreenshotter {
     }
   }
 
-  private async loadAdPreviewUrls(): Promise<void> {
+  /* private async loadAdPreviewUrls(): Promise<void> {
     try {
       const response = await this.sheets.spreadsheets.values.get({
         spreadsheetId: this.googleSheetId,
@@ -210,11 +239,9 @@ export default class AdsScreenshotter {
       console.error("Failed to load ad preview URLs:", error)
       throw error
     }
-  }
+  } */
 
-  
-
-  private async takeAdPreviewScreenshot(url: string, num: number): Promise<string> {
+  /* private async takeAdPreviewScreenshot(url: string, num: number): Promise<string> {
     const page = await this.browser!.newPage()
     try {
       await page.goto(url, { waitUntil: "networkidle0" })
@@ -243,7 +270,7 @@ export default class AdsScreenshotter {
     } catch (error) {
       console.error("Failed to take ad preview screenshot:", error)
     }
-  }
+  } */
 
   private async waitForTable(): Promise<void> {
     try {
@@ -281,8 +308,8 @@ export default class AdsScreenshotter {
       if (!fs.existsSync(this.screenshotsFolder)) {
         fs.mkdirSync(this.screenshotsFolder, { recursive: true })
       }
-
-      const screenshotPath = path.join(this.screenshotsFolder, `Campaign - ${this.campaignId}.png`)
+      //ACA PARECE QUE VA EL NOMBRE DE LA SCREENSHOT
+      const screenshotPath = path.join(this.screenshotsFolder, this.screenshotName)
       await this.page!.screenshot({
         path: screenshotPath,
         clip: {
@@ -415,7 +442,7 @@ export default class AdsScreenshotter {
   /**
    * Inserts the image URL into the specified cell in Google Sheets.
    */
-  private async insertUrlsIntoSheet(campaignImageUrl: string, adPreviewImageUrls: string[]): Promise<void> {
+  private async insertUrlsIntoSheet(campaignImageUrl: string): Promise<void> {
     try {
       const request = {
         spreadsheetId: this.googleSheetId,
@@ -423,7 +450,7 @@ export default class AdsScreenshotter {
         valueInputOption: "USER_ENTERED",
         insertDataOption: "INSERT_ROWS",
         requestBody: {
-          values: [[this.adAccountId, this.campaignId, campaignImageUrl, adPreviewImageUrls.join(";"), this.screenshotType]]
+          values: [[this.adAccountId, this.campaignId, campaignImageUrl, this.screenshotName, this.screenshotType]]
         }
       }
 
@@ -435,22 +462,37 @@ export default class AdsScreenshotter {
     }
   }
 
+  /* private getCampaignFolderId(month: string) {}
+
+  private async getFolderFolders(parentFolderId: string) {
+    //CAMBIAR EL NOMBRE
+    try {
+      const res = await this.drive.drives.list({
+        q: `'${parentFolderId}' in parents and mimeType = 'application/vnd.google-apps.folder' and trashed = false`
+      })
+      return res.data
+    } catch (err) {
+      // TODO(developer) - Handle error
+      throw err
+    }
+  } */
+
   /**
    * Orchestrates the Google Sheets update by uploading the screenshot and inserting the URL.
    */
-  private async updateGoogleSheetWithScreenshots(campaignScreenshotPath: string, adPreviewScreenshotPaths: string[]): Promise<void> {
-    const CAMPAIGN_FOLDER_ID = "13SsKjiNBDp-YKrUqeuGBGtrGkbQ-3ZOy"
-    const AD_PREVIEW_FOLDER_ID = "1efd-GlBbF3kGld0K7YqPghv6SdTdr9fG"
+  private async updateGoogleSheetWithScreenshots(campaignScreenshotPath: string): Promise<void> {
+    const CAMPAIGN_FOLDER_ID = MonthToFolder[this.month] //Folder id de EVIDENCIAS
+    //const AD_PREVIEW_FOLDER_ID = "1efd-GlBbF3kGld0K7YqPghv6SdTdr9fG"
 
     try {
       const campaignImageUrl = await this.uploadScreenshotToDrive(campaignScreenshotPath, CAMPAIGN_FOLDER_ID)
-      const adPreviewImageUrls = []
+      /* const adPreviewImageUrls = []
       for (const adPreviewScreenshotPath of adPreviewScreenshotPaths) {
         const adPreviewImageUrl = await this.uploadScreenshotToDrive(adPreviewScreenshotPath, AD_PREVIEW_FOLDER_ID)
         adPreviewImageUrls.push(adPreviewImageUrl)
-      }
+      } */
 
-      await this.insertUrlsIntoSheet(campaignImageUrl, adPreviewImageUrls)
+      await this.insertUrlsIntoSheet(campaignImageUrl)
     } catch (error) {
       console.error("Failed to update Google Sheet with screenshots:", error)
       throw error
@@ -460,11 +502,11 @@ export default class AdsScreenshotter {
   public async run(authenticationFactor: string = null, cleanCookies = false): Promise<void> {
     let hadError = false
     let campaignScreenshotPath: string
-    const adPreviewScreenshotPaths: string[] = []
+    //const adPreviewScreenshotPaths: string[] = []
 
     try {
       await this.initializeBrowser()
-      await this.loadAdPreviewUrls()
+      //await this.loadAdPreviewUrls()
       const cookiesLoaded = await this.loadCookies()
 
       if (!cookiesLoaded && !authenticationFactor) {
@@ -477,21 +519,21 @@ export default class AdsScreenshotter {
 
       campaignScreenshotPath = await this.navigateAndTakeScreenshot()
 
-      if (!this.adPreviewUrls.has(this.campaignId)) {
+      /* if (!this.adPreviewUrls.has(this.campaignId)) {
         throw new Error(`No ad preview URL found for campaign: ${this.campaignId}`)
-      }
+      } */
 
-      const adPreviewUrls = this.adPreviewUrls.get(this.campaignId)
+      /* const adPreviewUrls = this.adPreviewUrls.get(this.campaignId)
       for (let index = 0; index < adPreviewUrls.length; index++) {
         const adPreviewScreenshotPath = await this.takeAdPreviewScreenshot(adPreviewUrls[index], index)
         if (!adPreviewScreenshotPath) {
           continue
         }
         adPreviewScreenshotPaths.push(adPreviewScreenshotPath)
-      }
+      } */
 
       // Update Google Sheet with the screenshot URL
-      await this.updateGoogleSheetWithScreenshots(campaignScreenshotPath, adPreviewScreenshotPaths)
+      await this.updateGoogleSheetWithScreenshots(campaignScreenshotPath)
     } catch (error) {
       hadError = true
       console.error("An error occurred during the process:", error)
