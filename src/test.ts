@@ -3,9 +3,13 @@ import http from "http"
 process.loadEnvFile(".env")
 // Define the payload
 const data = JSON.stringify({
-  adAccountId: "2316303571926135",
+  adAccountId: "915602685684463",
   businessId: "411498659732220",
-  campaignId: "120212564829970604",
+  campaignId: "120217253965030109",
+  adIds: ["120217501294810109", "120217501355210109"],
+  screenshotName: "BR_FPM-FB_MARZO_1",
+  month: "MARZO",
+  screenshotType: "lifetime",
   authenticationFactor: "123123"
 })
 

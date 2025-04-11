@@ -1,5 +1,5 @@
 import express from "express"
-import AdsScreenshotter from "./AdsScreenshotter.ts"
+import AdsScreenshotter, { MonthToFolder } from "./AdsScreenshotter.ts"
 
 export interface AdsScreenshotterConfig {
   adAccountId: string
@@ -7,11 +7,11 @@ export interface AdsScreenshotterConfig {
   campaignId: string
   adIds: string[]
   screenshotName: string
-  month: string
+  month: keyof typeof MonthToFolder
   screenshotType: "lifetime" | "monthly"
-  googleServiceAccountKeyFile?: string
-  cookiesPath?: string
-  screenshotsFolder?: string
+  googleServiceAccountKeyFile: string
+  cookiesPath: string
+  screenshotsFolder: string
   googleSheetId: string
   googleSheetName: string
   targetCell: string
@@ -62,7 +62,7 @@ app.post("/screenshot", async (req, res: any) => {
   // Basic validation
   if (!adAccountId || !businessId || !campaignId || !adIds || !screenshotName || !month || !screenshotType) {
     return res.status(400).json({
-      error: "Missing required fields. Please provide 'adAccountId', 'businessId', 'campaignId' and 'screenshotType'."
+      error: "Missing required fields. Please provide 'adAccountId', 'businessId', 'campaignId', 'screenshotType', 'month', 'screenshotName' and 'adIds'."
     })
   }
 
@@ -94,6 +94,7 @@ app.post("/screenshot", async (req, res: any) => {
 
   try {
     const adsScreenshotter = new AdsScreenshotter(config)
+    console.log("About to run ads screenshoter")
     await adsScreenshotter.run(authenticationFactor)
 
     res.status(200).json({

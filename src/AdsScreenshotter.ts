@@ -9,30 +9,30 @@ export interface AdsScreenshotterConfig {
   campaignId: string
   screenshotType: "lifetime" | "monthly"
   adIds: string[]
-  month: string
+  month: keyof typeof MonthToFolder
   screenshotName: string
-  googleServiceAccountKeyFile?: string
+  googleServiceAccountKeyFile: string
   gcsBucketName?: string
-  cookiesPath?: string
-  screenshotsFolder?: string
+  cookiesPath: string
+  screenshotsFolder: string
   googleSheetId: string
   googleSheetName: string
 }
 
-export enum MonthToFolder {
-  "ENERO" = "1ua7qdI42NO9D0mKaYLdHxLTPMcs2Kkdg",
-  "FEBRERO" = "1FdmlLZh8jmNXS9xZImBfuhRLY7InkB9k",
-  "MARZO" = "1xw25By1iaWAKOcudZ1qkVoIAVZc1vJ-q",
-  "ABRIL" = "1piq_bFaHbbPBSsxL441V02kKufKxUzZ0",
-  "MAYO" = "1jZZ90lez0chKhKdqC3hQYOjxNvObWSCa",
-  "JUNIO" = "16J4CVlaOxZJq91Xu2cxmLr0l8IZtVpZz",
-  "JULIO" = "1qIGgJ5FNeBBtvrfPDzs3FufU0WdEugFt",
-  "AGOSTO" = "12loY12bI2vmpAipu3OqizCijU9U5telG",
-  "SEPTIEMBRE" = "1HyNqKFfkTseibsTvevw3qtOVaKFf91-F",
-  "OCTUBRE" = "1iHt79jSS7NZMdNn7i1AqQkdPoXsczYmp",
-  "NOVIEMBRE" = "1mhNuACwOhqzJIezUptrB5FU8KpQp1pZJ",
-  "DICIEMBRE" = "1ww3mwjT8mqEjy2vmkZvqbhfMqeO1bpxp"
-}
+export const MonthToFolder = {
+  "ENERO": "1ua7qdI42NO9D0mKaYLdHxLTPMcs2Kkdg",
+  "FEBRERO": "1FdmlLZh8jmNXS9xZImBfuhRLY7InkB9k",
+  "MARZO": "1xw25By1iaWAKOcudZ1qkVoIAVZc1vJ-q",
+  "ABRIL": "1piq_bFaHbbPBSsxL441V02kKufKxUzZ0",
+  "MAYO": "1jZZ90lez0chKhKdqC3hQYOjxNvObWSCa",
+  "JUNIO": "16J4CVlaOxZJq91Xu2cxmLr0l8IZtVpZz",
+  "JULIO": "1qIGgJ5FNeBBtvrfPDzs3FufU0WdEugFt",
+  "AGOSTO": "12loY12bI2vmpAipu3OqizCijU9U5telG",
+  "SEPTIEMBRE": "1HyNqKFfkTseibsTvevw3qtOVaKFf91-F",
+  "OCTUBRE": "1iHt79jSS7NZMdNn7i1AqQkdPoXsczYmp",
+  "NOVIEMBRE": "1mhNuACwOhqzJIezUptrB5FU8KpQp1pZJ",
+  "DICIEMBRE": "1ww3mwjT8mqEjy2vmkZvqbhfMqeO1bpxp"
+} as const
 
 export default class AdsScreenshotter {
   private adAccountId: string
@@ -41,7 +41,7 @@ export default class AdsScreenshotter {
   private screenshotType: "lifetime" | "monthly"
 
   private adIds: string[]
-  private month: string
+  private month: keyof typeof MonthToFolder
   private screenshotName: string
 
   private googleServiceAccountKeyFile: string
@@ -51,8 +51,8 @@ export default class AdsScreenshotter {
   private browser: Browser | null
   private page: Page | null
   //private adPreviewUrls: Map<string, string[]>
-  private sheets: sheets_v4.Sheets
-  private drive: drive_v3.Drive
+  private sheets: sheets_v4.Sheets = google.sheets("v4")
+  private drive: drive_v3.Drive = google.drive("v3")
   private googleSheetId: string
   private googleSheetName: string
 
@@ -82,7 +82,10 @@ export default class AdsScreenshotter {
 
   private initGoogleAPIs(): void {
     try {
-      const authOptions = {
+      const authOptions: {
+        scopes: string[]
+        keyFile?: string
+      } = {
         scopes: ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive", "https://www.googleapis.com/auth/devstorage.read_write"]
       }
       if (this.googleServiceAccountKeyFile) {
@@ -115,16 +118,22 @@ export default class AdsScreenshotter {
 
     this.browser = await puppeteer.launch(puppeteerOptions)
     this.page = await this.browser.newPage()
+    const { width, height } = await this.page.evaluate(() => {
+      return {
+        width: window.innerWidth,
+        height: window.innerHeight
+      }
+    })
     await this.page.setViewport({
-      width: 1920,
-      height: 1080
+      width: width,
+      height: height
     })
   }
 
   private async loadCookies(): Promise<boolean> {
     try {
-      if (fs.existsSync(this.cookiesPath)) {
-        const cookies = fs.readFileSync(this.cookiesPath, "utf-8")
+      if (fs.existsSync(this.cookiesPath as string)) {
+        const cookies = fs.readFileSync(this.cookiesPath as string, "utf-8")
         const parsedCookies = JSON.parse(cookies)
         if (parsedCookies.length > 0) {
           await this.page!.setCookie(...parsedCookies)
@@ -143,7 +152,7 @@ export default class AdsScreenshotter {
   private async saveCookies(): Promise<void> {
     try {
       const currentCookies = await this.page!.cookies()
-      fs.writeFileSync(this.cookiesPath, JSON.stringify(currentCookies, null, 2))
+      fs.writeFileSync(this.cookiesPath as string, JSON.stringify(currentCookies, null, 2))
       console.log("Cookies saved successfully.")
     } catch (error) {
       console.error("Failed to save cookies:", error)
@@ -161,7 +170,7 @@ export default class AdsScreenshotter {
     const datePreset = this.screenshotType === "lifetime" ? "maximum" : "last_month"
     const dateParam = `${startDateString}_${endDateString}%2C${datePreset}`
 
-    const url = `https://adsmanager.facebook.com/adsmanager/manage/campaigns?act=${this.adAccountId}&business_id=${this.businessId}&columns=${columnsParam}&filter_set=${encodedFilterSet}&date=${dateParam}&breakdown_regrouping=true&nav_source=no_referrer`
+    const url = `https://adsmanager.facebook.com/adsmanager/manage/ads?act=${this.adAccountId}&business_id=${this.businessId}&columns=${columnsParam}&filter_set=${filterSet}&date=${dateParam}&breakdown_regrouping=true&nav_source=no_referrer`
 
     console.log(`Navigating to: ${url}`)
 
@@ -192,8 +201,8 @@ export default class AdsScreenshotter {
 
   private buildFilterSet(): string {
     const filterSeparator = String.fromCharCode(30)
-    const campaignIds = this.adIds.map((adId) => encodeURIComponent(adId)).join("%2C")
-    return `SEARCH_BY_ADGROUP_IDS-STRING_SET${filterSeparator}ANY${filterSeparator}[${this.campaignId}]`
+    const adIdsFilter = this.adIds.map((adId) => `"${adId}"`).join("%2C")
+    return `SEARCH_BY_ADGROUP_IDS-STRING_SET${filterSeparator}ANY${filterSeparator}[${adIdsFilter}]`
   }
 
   private buildColumnsParam(): string {
@@ -212,72 +221,12 @@ export default class AdsScreenshotter {
     }
   }
 
-  /* private async loadAdPreviewUrls(): Promise<void> {
-    try {
-      const response = await this.sheets.spreadsheets.values.get({
-        spreadsheetId: this.googleSheetId,
-        range: "AD_PREVIEW_URLS"
-      })
-
-      const rows = response.data.values
-      if (rows && rows.length > 0) {
-        // Assuming first row contains headers
-        const campaignIdIndex = rows[0].findIndex((header) => header === "Campaign Id")
-        const adPreviewUrlIndex = rows[0].findIndex((header) => header === "Ad Preview Shareable Link")
-
-        if (campaignIdIndex === -1 || adPreviewUrlIndex === -1) {
-          throw new Error("Required columns not found in AD_PREVIEW_URLS sheet")
-        }
-
-        const uniqueCampaignIds = new Set(rows.map((row) => row[campaignIdIndex]))
-        for (const campaignId of uniqueCampaignIds) {
-          const matchingAdPreviewUrls = rows.filter((row) => row[campaignIdIndex] === campaignId).map((row) => row[adPreviewUrlIndex])
-          this.adPreviewUrls.set(campaignId, matchingAdPreviewUrls)
-        }
-      }
-    } catch (error) {
-      console.error("Failed to load ad preview URLs:", error)
-      throw error
-    }
-  } */
-
-  /* private async takeAdPreviewScreenshot(url: string, num: number): Promise<string> {
-    const page = await this.browser!.newPage()
-    try {
-      await page.goto(url, { waitUntil: "networkidle0" })
-
-      const errorElement = await page.$("#ad_preview_error_box")
-      if (errorElement) {
-        console.warn("The ad preview is not viewable due to an error")
-        await page.close()
-      }
-
-      await page.waitForSelector('[data-testid="ad-preview-mobile-feed-standard"]', {
-        timeout: 60000,
-        visible: true
-      })
-
-      const element = await page.$('[data-testid="ad-preview-mobile-feed-standard"]')
-      if (!element) {
-        throw new Error("Could not find ad preview element")
-      }
-
-      const screenshotPath = path.join(this.screenshotsFolder, `Ad Preview - ${this.campaignId} - ${num}.png`)
-      await element.screenshot({ path: screenshotPath })
-
-      await page.close()
-      return screenshotPath
-    } catch (error) {
-      console.error("Failed to take ad preview screenshot:", error)
-    }
-  } */
-
   private async waitForTable(): Promise<void> {
     try {
       console.log("Waiting for the table component to be visible...")
       const screenshotSelector = 'div[role="table"]._3h1i._1mie'
       await this.page!.waitForSelector(screenshotSelector, {
-        timeout: 30000,
+        timeout: 3000000,
         visible: true
       })
       console.log("Table component is visible.")
@@ -313,10 +262,10 @@ export default class AdsScreenshotter {
       await this.page!.screenshot({
         path: screenshotPath,
         clip: {
-          x: Math.max(0, box.x - 5),
-          y: Math.max(0, box.y - 5),
-          width: box.width + 10,
-          height: Math.floor(box.height * 0.65) + 5 // adjust to crop bottom 35%
+          x: Math.max(0, box.x),
+          y: Math.max(0, box.y),
+          width: Math.min(box.width, 1920),
+          height: Math.min(box.height * 1, 1080)
         }
       })
 
@@ -338,21 +287,25 @@ export default class AdsScreenshotter {
       const email = process.env.EMAIL
       const password = process.env.PASSWORD
 
-      await this.page.type("#email", email)
-      await this.page.type("#pass", password)
-      await this.page.click('button[type="submit"]')
+      if (this.page) {
+        await this.page.type("#email", email as string)
+        await this.page.type("#pass", password as string)
+        await this.page.click('button[type="submit"]')
+      }
 
       const element = await this.page!.waitForSelector('input[type="text"]', { timeout: 5000 })
       if (!element) {
         throw new Error("2FA not selector not found")
       }
 
-      await this.page.type('input[type="text"]', authenticationFactor)
-      await this.delay(1000)
-      await this.page.click('div[role="button"]')
+      if (this.page) {
+        await this.page.type('input[type="text"]', authenticationFactor)
+        await this.delay(1000)
+        await this.page.click('div[role="button"]')
+      }
 
       console.log("Wait 10 seconds for cookies to be stored")
-      await this.delay(10000)
+      await this.delay(100000) //added a cero
       await this.saveCookies()
     } catch (error) {
       console.error("Manual login failed:", error)
@@ -369,9 +322,11 @@ export default class AdsScreenshotter {
       const email = process.env.EMAIL
       const password = process.env.PASSWORD
 
-      await this.page.type("#email", email)
-      await this.page.type("#pass", password)
-      await this.page.click('button[type="submit"]')
+      if (this.page) {
+        await this.page.type("#email", email as string)
+        await this.page.type("#pass", password as string)
+        await this.page.click('button[type="submit"]')
+      }
 
       console.log("Please log in manually. Waiting 30 seconds...")
       await this.delay(30000)
@@ -481,8 +436,8 @@ export default class AdsScreenshotter {
    * Orchestrates the Google Sheets update by uploading the screenshot and inserting the URL.
    */
   private async updateGoogleSheetWithScreenshots(campaignScreenshotPath: string): Promise<void> {
-    const CAMPAIGN_FOLDER_ID = MonthToFolder[this.month] //Folder id de EVIDENCIAS
-    //const AD_PREVIEW_FOLDER_ID = "1efd-GlBbF3kGld0K7YqPghv6SdTdr9fG"
+    //const CAMPAIGN_FOLDER_ID = MonthToFolder[this.month] //Folder id de EVIDENCIAS
+    const CAMPAIGN_FOLDER_ID = "1efd-GlBbF3kGld0K7YqPghv6SdTdr9fG"
 
     try {
       const campaignImageUrl = await this.uploadScreenshotToDrive(campaignScreenshotPath, CAMPAIGN_FOLDER_ID)
@@ -499,7 +454,7 @@ export default class AdsScreenshotter {
     }
   }
 
-  public async run(authenticationFactor: string = null, cleanCookies = false): Promise<void> {
+  public async run(authenticationFactor: any = null, cleanCookies = false): Promise<void> {
     let hadError = false
     let campaignScreenshotPath: string
     //const adPreviewScreenshotPaths: string[] = []
@@ -554,8 +509,8 @@ export default class AdsScreenshotter {
       }
 
       if (cleanCookies) {
-        if (fs.existsSync(this.cookiesPath)) {
-          fs.unlinkSync(this.cookiesPath)
+        if (fs.existsSync(this.cookiesPath as string)) {
+          fs.unlinkSync(this.cookiesPath as string)
           console.log("Deleted cookies file.")
         }
       }
