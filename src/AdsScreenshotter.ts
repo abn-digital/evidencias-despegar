@@ -39,18 +39,15 @@ export default class AdsScreenshotter {
   private businessId: string
   private campaignId: string
   private screenshotType: "lifetime" | "monthly"
-
   private adIds: string[]
   private month: keyof typeof MonthToFolder
   private screenshotName: string
-
   private googleServiceAccountKeyFile: string
   private cookiesPath: string
   private screenshotsFolder: string
   private screenshotSelector: string
   private browser: Browser | null
   private page: Page | null
-  //private adPreviewUrls: Map<string, string[]>
   private sheets: sheets_v4.Sheets = google.sheets("v4")
   private drive: drive_v3.Drive = google.drive("v3")
   private googleSheetId: string
@@ -61,19 +58,15 @@ export default class AdsScreenshotter {
     this.businessId = config.businessId
     this.campaignId = config.campaignId
     this.screenshotType = config.screenshotType
-
     this.adIds = config.adIds
     this.month = config.month
     this.screenshotName = config.screenshotName
-
     this.googleServiceAccountKeyFile = config.googleServiceAccountKeyFile
     this.cookiesPath = config.cookiesPath
     this.screenshotsFolder = config.screenshotsFolder
     this.screenshotSelector = 'div[role="table"]._3h1i._1mie'
     this.browser = null
     this.page = null
-    //this.adPreviewUrls = new Map()
-
     this.googleSheetId = config.googleSheetId
     this.googleSheetName = config.googleSheetName
 
@@ -161,7 +154,6 @@ export default class AdsScreenshotter {
 
   private async navigateToTargetUrl(): Promise<void> {
     const filterSet = this.buildFilterSet()
-    const encodedFilterSet = encodeURIComponent(filterSet)
     const columnsParam = this.buildColumnsParam()
     const lastMonthDate = new Date(new Date().setDate(1)).setHours(-1) //Chequear esto
     const lastMonthStartDate = new Date(lastMonthDate).setDate(1)
@@ -417,35 +409,15 @@ export default class AdsScreenshotter {
     }
   }
 
-  /* private getCampaignFolderId(month: string) {}
-
-  private async getFolderFolders(parentFolderId: string) {
-    //CAMBIAR EL NOMBRE
-    try {
-      const res = await this.drive.drives.list({
-        q: `'${parentFolderId}' in parents and mimeType = 'application/vnd.google-apps.folder' and trashed = false`
-      })
-      return res.data
-    } catch (err) {
-      // TODO(developer) - Handle error
-      throw err
-    }
-  } */
-
   /**
    * Orchestrates the Google Sheets update by uploading the screenshot and inserting the URL.
    */
   private async updateGoogleSheetWithScreenshots(campaignScreenshotPath: string): Promise<void> {
-    //const CAMPAIGN_FOLDER_ID = MonthToFolder[this.month] //Folder id de EVIDENCIAS
-    const CAMPAIGN_FOLDER_ID = "1efd-GlBbF3kGld0K7YqPghv6SdTdr9fG"
+    const CAMPAIGN_FOLDER_ID = MonthToFolder[this.month] //Folder id de EVIDENCIAS
+    //const CAMPAIGN_FOLDER_ID = "1efd-GlBbF3kGld0K7YqPghv6SdTdr9fG"
 
     try {
       const campaignImageUrl = await this.uploadScreenshotToDrive(campaignScreenshotPath, CAMPAIGN_FOLDER_ID)
-      /* const adPreviewImageUrls = []
-      for (const adPreviewScreenshotPath of adPreviewScreenshotPaths) {
-        const adPreviewImageUrl = await this.uploadScreenshotToDrive(adPreviewScreenshotPath, AD_PREVIEW_FOLDER_ID)
-        adPreviewImageUrls.push(adPreviewImageUrl)
-      } */
 
       await this.insertUrlsIntoSheet(campaignImageUrl)
     } catch (error) {
@@ -473,19 +445,6 @@ export default class AdsScreenshotter {
       }
 
       campaignScreenshotPath = await this.navigateAndTakeScreenshot()
-
-      /* if (!this.adPreviewUrls.has(this.campaignId)) {
-        throw new Error(`No ad preview URL found for campaign: ${this.campaignId}`)
-      } */
-
-      /* const adPreviewUrls = this.adPreviewUrls.get(this.campaignId)
-      for (let index = 0; index < adPreviewUrls.length; index++) {
-        const adPreviewScreenshotPath = await this.takeAdPreviewScreenshot(adPreviewUrls[index], index)
-        if (!adPreviewScreenshotPath) {
-          continue
-        }
-        adPreviewScreenshotPaths.push(adPreviewScreenshotPath)
-      } */
 
       // Update Google Sheet with the screenshot URL
       await this.updateGoogleSheetWithScreenshots(campaignScreenshotPath)
