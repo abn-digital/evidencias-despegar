@@ -218,7 +218,7 @@ export default class AdsScreenshotter {
       console.log("Waiting for the table component to be visible...")
       const screenshotSelector = 'div[role="table"]._3h1i._1mie'
       await this.page!.waitForSelector(screenshotSelector, {
-        timeout: 3000000,
+        timeout: 30000,
         visible: true
       })
       console.log("Table component is visible.")
@@ -297,7 +297,7 @@ export default class AdsScreenshotter {
       }
 
       console.log("Wait 10 seconds for cookies to be stored")
-      await this.delay(100000) //added a cero
+      await this.delay(10000)
       await this.saveCookies()
     } catch (error) {
       console.error("Manual login failed:", error)
