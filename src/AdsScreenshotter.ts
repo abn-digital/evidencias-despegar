@@ -155,7 +155,7 @@ export default class AdsScreenshotter {
   private async navigateToTargetUrl(): Promise<void> {
     const filterSet = this.buildFilterSet()
     const columnsParam = this.buildColumnsParam()
-    const lastMonthDate = new Date(new Date().setDate(1)).setHours(-1) //Chequear esto
+    const lastMonthDate = new Date(new Date().setDate(1)).setHours(-1)
     const lastMonthStartDate = new Date(lastMonthDate).setDate(1)
     const startDateString = new Date(lastMonthStartDate).toISOString().split("T")[0]
     const endDateString = new Date(lastMonthDate).toISOString().split("T")[0]
@@ -249,7 +249,6 @@ export default class AdsScreenshotter {
       if (!fs.existsSync(this.screenshotsFolder)) {
         fs.mkdirSync(this.screenshotsFolder, { recursive: true })
       }
-      //ACA PARECE QUE VA EL NOMBRE DE LA SCREENSHOT
       const screenshotPath = path.join(this.screenshotsFolder, this.screenshotName)
       await this.page!.screenshot({
         path: screenshotPath,
@@ -413,9 +412,7 @@ export default class AdsScreenshotter {
    * Orchestrates the Google Sheets update by uploading the screenshot and inserting the URL.
    */
   private async updateGoogleSheetWithScreenshots(campaignScreenshotPath: string): Promise<void> {
-    const CAMPAIGN_FOLDER_ID = MonthToFolder[this.month] //Folder id de EVIDENCIAS
-    //const CAMPAIGN_FOLDER_ID = "1efd-GlBbF3kGld0K7YqPghv6SdTdr9fG"
-
+    const CAMPAIGN_FOLDER_ID = MonthToFolder[this.month] //Folder id de EVIDENCIAS de acuerdo a mes.
     try {
       const campaignImageUrl = await this.uploadScreenshotToDrive(campaignScreenshotPath, CAMPAIGN_FOLDER_ID)
 
@@ -429,11 +426,9 @@ export default class AdsScreenshotter {
   public async run(authenticationFactor: any = null, cleanCookies = false): Promise<void> {
     let hadError = false
     let campaignScreenshotPath: string
-    //const adPreviewScreenshotPaths: string[] = []
 
     try {
       await this.initializeBrowser()
-      //await this.loadAdPreviewUrls()
       const cookiesLoaded = await this.loadCookies()
 
       if (!cookiesLoaded && !authenticationFactor) {
