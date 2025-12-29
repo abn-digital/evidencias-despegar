@@ -129,7 +129,8 @@ export default class AdsScreenshotter {
         const cookies = fs.readFileSync(this.cookiesPath as string, "utf-8")
         const parsedCookies = JSON.parse(cookies)
         if (parsedCookies.length > 0) {
-          await this.page!.setCookie(...parsedCookies)
+          const client = await this.page!.createCDPSession()
+          await client.send('Network.setCookies', { cookies: parsedCookies })
           console.log("Cookies loaded successfully.")
           return true
         }
@@ -144,8 +145,9 @@ export default class AdsScreenshotter {
 
   private async saveCookies(): Promise<void> {
     try {
-      const currentCookies = await this.page!.cookies()
-      fs.writeFileSync(this.cookiesPath as string, JSON.stringify(currentCookies, null, 2))
+      const client = await this.page!.createCDPSession()
+      const { cookies } = await client.send('Network.getAllCookies')
+      fs.writeFileSync(this.cookiesPath as string, JSON.stringify(cookies, null, 2))
       console.log("Cookies saved successfully.")
     } catch (error) {
       console.error("Failed to save cookies:", error)
@@ -167,7 +169,7 @@ export default class AdsScreenshotter {
     console.log(`Navigating to: ${url}`)
 
     try {
-      await this.page!.goto(url, { waitUntil: "networkidle0" })
+      await this.page!.goto(url, { waitUntil: "networkidle2", timeout: 80000 })
 
       // Check if login is required by verifying if the URL contains "login"
       const currentUrl = this.page!.url()
@@ -180,7 +182,7 @@ export default class AdsScreenshotter {
         console.log("Cookies saved. Restarting navigation to ensure session is loaded.")
 
         // Restart the navigation process
-        await this.page!.goto(url, { waitUntil: "networkidle0" })
+        await this.page!.goto(url, { waitUntil: "networkidle2", timeout: 80000 })
       }
 
       console.log("Successfully navigated to the Meta Ads page.")
@@ -218,8 +220,7 @@ export default class AdsScreenshotter {
       console.log("Waiting for the table component to be visible...")
       const screenshotSelector = 'div[role="table"]._3h1i._1mie'
       await this.page!.waitForSelector(screenshotSelector, {
-        timeout: 30000,
-        visible: true
+        timeout: 80000
       })
       console.log("Table component is visible.")
       console.log("Waiting 5 seconds for content to stabilize...")
@@ -273,7 +274,8 @@ export default class AdsScreenshotter {
     try {
       console.log("Navigating to Facebook login page...")
       await this.page!.goto("https://www.facebook.com/login", {
-        waitUntil: "networkidle2"
+        waitUntil: "networkidle2",
+        timeout: 80000
       })
       const email = process.env.EMAIL
       const password = process.env.PASSWORD
@@ -308,7 +310,8 @@ export default class AdsScreenshotter {
     try {
       console.log("Navigating to Facebook login page...")
       await this.page!.goto("https://www.facebook.com/login", {
-        waitUntil: "networkidle2"
+        waitUntil: "networkidle2",
+        timeout: 80000
       })
       const email = process.env.EMAIL
       const password = process.env.PASSWORD
